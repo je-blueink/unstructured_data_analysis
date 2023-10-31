@@ -73,3 +73,32 @@ lw_sent <- ifelse(lw_words %in% bingpos$word, 1,
                   ifelse(lw_words %in% bingneg$word, -1, 0)) #단어별 감성 표시
 head(lw_sent)
 barplot(tapply(lw_sent, (seq_along(lw_sent)-1) %/% 1000, sum))
+
+# ---- 6장 ----
+install.packages("textstem")
+library(textstem)
+library(stopwords)
+
+pen <- c("A fountain pen is a writing instrument.",
+         "Fountain pens are used for important official works.",
+         "Some fountain pens are treated as collectables.")
+pen <- tolower(pen) #대문자 변환
+pen <- gsub(pen, pattern = "([^[:alnum:][:blank:]’-])", replacement = "") #문장부호 삭제
+pen <- lemmatize_strings(pen) #원형복원
+fountain <- strsplit(pen, " ") #토큰화
+
+lev <- sort(unique(unlist(fountain))) #토큰 목록 만들기
+DTM <- lapply(fountain, FUN = function(y, lev){table(factor(y, lev, ordered = T))}, lev=lev)
+DTM <- matrix(unlist(DTM), nrow = length(DTM), byrow = TRUE) #문서-단어 행렬 변환
+colnames(DTM) <- lev
+rownames(DTM) <- paste('doc', 1:dim(DTM)[1], sep = "")
+
+TF <- 1+log(DTM) #TF행렬 만들기
+TF[TF==-Inf] <- 0  #음의 무한대 값을 0으로 바꾸기
+DTM[DTM>0] <- 1  #0이 아닌 셀을 1로 바꾸기
+DF <- colSums(DTM)  #열별 합계 - 문서빈도 벡터 만들기
+IDF <- log(dim(DTM)[1]/DF)  #역문서빈도 벡터 만들기
+TFIDF <- t(t(DF)*IDF)  #단어빈도-역문서빈도 행렬 만들기 
+
+length(DTM[DTM==0])  #문서-단어 행렬에서 0인 셀의 개수
+length(DTM[DTM>0])  #문서-단어 행렬에서 0이 아닌 셀의 개수
